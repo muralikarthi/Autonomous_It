@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualMachineScaleSets_wordpresserver_name": {
+            "value": null
+        },
+        "networkSecurityGroups_wordpresserver_nsg_externalid": {
+            "value": null
+        },
+        "virtualNetworks_WORDPRESS_vnet_externalid": {
+            "value": null
+        },
+        "loadBalancers_Webserver_externalid": {
+            "value": null
+        },
+        "disks_wordpresserver_wordpresserver_0_OsDisk_1_e799655f44f04729bcd1b235bc536f14_externalid": {
+            "value": null
+        }
+    }
+}
