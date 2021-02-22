@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualMachineScaleSets_MySQL_name": {
+            "value": null
+        },
+        "virtualNetworks_MySQL_group_vnet_name": {
+            "value": null
+        },
+        "autoscalesettings_MySQLautoscale_name": {
+            "value": null
+        },
+        "networkSecurityGroups_basicNsgMySQL_group_vnet_nic01_name": {
+            "value": null
+        },
+        "disks_MySQL_MySQL_1_OsDisk_1_c47c3ce3752c4245b37a2837b0c5b587_externalid": {
+            "value": null
+        }
+    }
+}

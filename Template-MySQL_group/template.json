@@ -1,0 +1,342 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualMachineScaleSets_MySQL_name": {
+            "defaultValue": "MySQL",
+            "type": "String"
+        },
+        "virtualNetworks_MySQL_group_vnet_name": {
+            "defaultValue": "MySQL_group-vnet",
+            "type": "String"
+        },
+        "autoscalesettings_MySQLautoscale_name": {
+            "defaultValue": "MySQLautoscale",
+            "type": "String"
+        },
+        "networkSecurityGroups_basicNsgMySQL_group_vnet_nic01_name": {
+            "defaultValue": "basicNsgMySQL_group-vnet-nic01",
+            "type": "String"
+        },
+        "disks_MySQL_MySQL_1_OsDisk_1_c47c3ce3752c4245b37a2837b0c5b587_externalid": {
+            "defaultValue": "/subscriptions/d71d6bdf-4185-4f8d-a7ff-e6e30757ee4c/resourceGroups/MySQL_group/providers/Microsoft.Compute/disks/MySQL_MySQL_1_OsDisk_1_c47c3ce3752c4245b37a2837b0c5b587",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-05-01",
+            "name": "[parameters('networkSecurityGroups_basicNsgMySQL_group_vnet_nic01_name')]",
+            "location": "eastus",
+            "properties": {
+                "securityRules": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-05-01",
+            "name": "[parameters('virtualNetworks_MySQL_group_vnet_name')]",
+            "location": "eastus",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.1.0.0/24"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "default",
+                        "properties": {
+                            "addressPrefix": "10.1.0.0/24",
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Enabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        }
+                    }
+                ],
+                "virtualNetworkPeerings": [],
+                "enableDdosProtection": false,
+                "enableVmProtection": false
+            }
+        },
+        {
+            "type": "microsoft.insights/autoscalesettings",
+            "apiVersion": "2014-04-01",
+            "name": "[parameters('autoscalesettings_MySQLautoscale_name')]",
+            "location": "eastus",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('virtualMachineScaleSets_MySQL_name'))]"
+            ],
+            "properties": {
+                "profiles": [
+                    {
+                        "name": "Profile1",
+                        "capacity": {
+                            "minimum": "1",
+                            "maximum": "3",
+                            "default": "1"
+                        },
+                        "rules": [
+                            {
+                                "metricTrigger": {
+                                    "metricName": "Percentage CPU",
+                                    "metricNamespace": "",
+                                    "metricResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('virtualMachineScaleSets_MySQL_name'))]",
+                                    "timeGrain": "PT1M",
+                                    "statistic": "Average",
+                                    "timeWindow": "PT5M",
+                                    "timeAggregation": "Average",
+                                    "operator": "GreaterThan",
+                                    "threshold": 70,
+                                    "dimensions": null,
+                                    "dividePerInstance": false
+                                },
+                                "scaleAction": {
+                                    "direction": "Increase",
+                                    "type": "ChangeCount",
+                                    "value": "1",
+                                    "cooldown": "PT1M"
+                                }
+                            },
+                            {
+                                "metricTrigger": {
+                                    "metricName": "Percentage CPU",
+                                    "metricNamespace": "",
+                                    "metricResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('virtualMachineScaleSets_MySQL_name'))]",
+                                    "timeGrain": "PT1M",
+                                    "statistic": "Average",
+                                    "timeWindow": "PT5M",
+                                    "timeAggregation": "Average",
+                                    "operator": "LessThan",
+                                    "threshold": 70,
+                                    "dimensions": null,
+                                    "dividePerInstance": false
+                                },
+                                "scaleAction": {
+                                    "direction": "Decrease",
+                                    "type": "ChangeCount",
+                                    "value": "1",
+                                    "cooldown": "PT1M"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "enabled": true,
+                "name": "[parameters('autoscalesettings_MySQLautoscale_name')]",
+                "targetResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('virtualMachineScaleSets_MySQL_name'))]"
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2020-05-01",
+            "name": "[concat(parameters('virtualNetworks_MySQL_group_vnet_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworks_MySQL_group_vnet_name'))]"
+            ],
+            "properties": {
+                "addressPrefix": "10.1.0.0/24",
+                "delegations": [],
+                "privateEndpointNetworkPolicies": "Enabled",
+                "privateLinkServiceNetworkPolicies": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "apiVersion": "2019-07-01",
+            "name": "[parameters('virtualMachineScaleSets_MySQL_name')]",
+            "location": "eastus",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_basicNsgMySQL_group_vnet_nic01_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_MySQL_group_vnet_name'), 'default')]"
+            ],
+            "sku": {
+                "name": "Standard_B1s",
+                "tier": "Standard",
+                "capacity": 1
+            },
+            "plan": {
+                "name": "mysql56-ubuntu-1604",
+                "product": "mysql",
+                "publisher": "jetware-srl"
+            },
+            "properties": {
+                "singlePlacementGroup": true,
+                "upgradePolicy": {
+                    "mode": "Manual"
+                },
+                "scaleInPolicy": {
+                    "rules": [
+                        "NewestVM"
+                    ]
+                },
+                "virtualMachineProfile": {
+                    "osProfile": {
+                        "computerNamePrefix": "mysql4sqb",
+                        "adminUsername": "azureuser",
+                        "linuxConfiguration": {
+                            "disablePasswordAuthentication": false,
+                            "provisionVMAgent": true
+                        },
+                        "secrets": []
+                    },
+                    "storageProfile": {
+                        "osDisk": {
+                            "osType": "Linux",
+                            "createOption": "FromImage",
+                            "caching": "ReadWrite",
+                            "managedDisk": {
+                                "storageAccountType": "Standard_LRS"
+                            },
+                            "diskSizeGB": 30
+                        },
+                        "imageReference": {
+                            "publisher": "jetware-srl",
+                            "offer": "mysql",
+                            "sku": "mysql56-ubuntu-1604",
+                            "version": "1.0.170503"
+                        }
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "[concat(parameters('virtualMachineScaleSets_MySQL_name'), '_group-vnet-nic01')]",
+                                "properties": {
+                                    "primary": true,
+                                    "enableAcceleratedNetworking": false,
+                                    "networkSecurityGroup": {
+                                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_basicNsgMySQL_group_vnet_nic01_name'))]"
+                                    },
+                                    "dnsSettings": {
+                                        "dnsServers": []
+                                    },
+                                    "enableIPForwarding": false,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "[concat(parameters('virtualMachineScaleSets_MySQL_name'), '_group-vnet-nic01-defaultIpConfiguration')]",
+                                            "properties": {
+                                                "primary": true,
+                                                "subnet": {
+                                                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_MySQL_group_vnet_name'), 'default')]"
+                                                },
+                                                "privateIPAddressVersion": "IPv4"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "diagnosticsProfile": {
+                        "bootDiagnostics": {
+                            "enabled": true
+                        }
+                    },
+                    "extensionProfile": {
+                        "extensions": []
+                    },
+                    "priority": "Regular"
+                },
+                "overprovision": true,
+                "doNotRunExtensionsOnOverprovisionedVMs": false,
+                "platformFaultDomainCount": 5
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachineScaleSets/virtualMachines",
+            "apiVersion": "2019-07-01",
+            "name": "[concat(parameters('virtualMachineScaleSets_MySQL_name'), '/1')]",
+            "location": "eastus",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('virtualMachineScaleSets_MySQL_name'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_basicNsgMySQL_group_vnet_nic01_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_MySQL_group_vnet_name'), 'default')]"
+            ],
+            "sku": {
+                "name": "Standard_B1s",
+                "tier": "Standard"
+            },
+            "plan": {
+                "name": "mysql56-ubuntu-1604",
+                "product": "mysql",
+                "publisher": "jetware-srl"
+            },
+            "properties": {
+                "networkProfileConfiguration": {
+                    "networkInterfaceConfigurations": [
+                        {
+                            "name": "MySQL_group-vnet-nic01",
+                            "properties": {
+                                "primary": true,
+                                "enableAcceleratedNetworking": false,
+                                "networkSecurityGroup": {
+                                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_basicNsgMySQL_group_vnet_nic01_name'))]"
+                                },
+                                "dnsSettings": {
+                                    "dnsServers": []
+                                },
+                                "enableIPForwarding": false,
+                                "ipConfigurations": [
+                                    {
+                                        "name": "MySQL_group-vnet-nic01-defaultIpConfiguration",
+                                        "properties": {
+                                            "primary": true,
+                                            "subnet": {
+                                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_MySQL_group_vnet_name'), 'default')]"
+                                            },
+                                            "privateIPAddressVersion": "IPv4"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "hardwareProfile": {},
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "jetware-srl",
+                        "offer": "mysql",
+                        "sku": "mysql56-ubuntu-1604",
+                        "version": "1.0.170503"
+                    },
+                    "osDisk": {
+                        "osType": "Linux",
+                        "name": "MySQL_MySQL_1_OsDisk_1_c47c3ce3752c4245b37a2837b0c5b587",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                            "id": "[parameters('disks_MySQL_MySQL_1_OsDisk_1_c47c3ce3752c4245b37a2837b0c5b587_externalid')]"
+                        }
+                    },
+                    "dataDisks": []
+                },
+                "osProfile": {
+                    "computerName": "mysql4sqb000001",
+                    "adminUsername": "azureuser",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": false,
+                        "provisionVMAgent": true
+                    },
+                    "secrets": [],
+                    "allowExtensionOperations": true,
+                    "requireGuestProvisionSignal": true
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[concat(resourceId('Microsoft.Compute/virtualMachineScaleSets/virtualMachines', parameters('virtualMachineScaleSets_MySQL_name'), '1'), '/networkInterfaces/MySQL_group-vnet-nic01')]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            }
+        }
+    ]
+}
